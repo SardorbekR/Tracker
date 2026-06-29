@@ -8,6 +8,8 @@
 import UIKit
 
 final class TrackersViewController: UIViewController {
+    // MARK: - Private Properties
+
     private let defaultCategoryTitle = "Важное"
 
     private var categories: [TrackerCategory] = []
@@ -85,6 +87,8 @@ final class TrackersViewController: UIViewController {
         return stackView
     }()
 
+    // MARK: - Lifecycle
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
@@ -93,6 +97,8 @@ final class TrackersViewController: UIViewController {
         setupPlaceholder()
         updatePlaceholderVisibility()
     }
+
+    // MARK: - Setup
 
     private func setupNavigationBar() {
         navigationItem.title = "Трекеры"
@@ -125,6 +131,8 @@ final class TrackersViewController: UIViewController {
         ])
     }
 
+    // MARK: - Private Methods
+
     private func updatePlaceholderVisibility() {
         let isEmpty = visibleCategories.isEmpty
         placeholderStackView.isHidden = !isEmpty
@@ -151,19 +159,6 @@ final class TrackersViewController: UIViewController {
         }
     }
 
-    @objc private func didTapAddButton() {
-        let createHabitViewController = CreateHabitViewController()
-        createHabitViewController.delegate = self
-        let navigationController = UINavigationController(rootViewController: createHabitViewController)
-        present(navigationController, animated: true)
-    }
-
-    @objc private func datePickerValueChanged(_ sender: UIDatePicker) {
-        currentDate = Calendar.current.startOfDay(for: sender.date)
-        isSelectedDateInFuture = currentDate > Calendar.current.startOfDay(for: Date())
-        reload()
-    }
-
     private func weekday(from date: Date) -> Weekday {
         let calendarWeekday = Calendar.current.component(.weekday, from: date)
         return Weekday(rawValue: (calendarWeekday + 5) % 7 + 1) ?? .monday
@@ -178,7 +173,24 @@ final class TrackersViewController: UIViewController {
     private func completedDaysCount(_ tracker: Tracker) -> Int {
         completedTrackers.filter { $0.trackerId == tracker.id }.count
     }
+
+    // MARK: - Actions
+
+    @objc private func didTapAddButton() {
+        let createHabitViewController = CreateHabitViewController()
+        createHabitViewController.delegate = self
+        let navigationController = UINavigationController(rootViewController: createHabitViewController)
+        present(navigationController, animated: true)
+    }
+
+    @objc private func datePickerValueChanged(_ sender: UIDatePicker) {
+        currentDate = Calendar.current.startOfDay(for: sender.date)
+        isSelectedDateInFuture = currentDate > Calendar.current.startOfDay(for: Date())
+        reload()
+    }
 }
+
+// MARK: - UICollectionViewDataSource
 
 extension TrackersViewController: UICollectionViewDataSource {
     func numberOfSections(in collectionView: UICollectionView) -> Int {
@@ -232,6 +244,8 @@ extension TrackersViewController: UICollectionViewDataSource {
     }
 }
 
+// MARK: - UICollectionViewDelegateFlowLayout
+
 extension TrackersViewController: UICollectionViewDelegateFlowLayout {
     func collectionView(
         _ collectionView: UICollectionView,
@@ -277,6 +291,8 @@ extension TrackersViewController: UICollectionViewDelegateFlowLayout {
     }
 }
 
+// MARK: - TrackerCellDelegate
+
 extension TrackersViewController: TrackerCellDelegate {
     func trackerCellDidToggleCompletion(_ cell: TrackerCell) {
         guard
@@ -293,9 +309,15 @@ extension TrackersViewController: TrackerCellDelegate {
         } else {
             completedTrackers.append(TrackerRecord(trackerId: tracker.id, date: currentDate))
         }
-        collectionView.reloadItems(at: [indexPath])
+        cell.updateCompletionState(
+            isCompleted: isTrackerCompleted(tracker, on: currentDate),
+            completedDays: completedDaysCount(tracker),
+            isEnabled: !isSelectedDateInFuture
+        )
     }
 }
+
+// MARK: - CreateHabitViewControllerDelegate
 
 extension TrackersViewController: CreateHabitViewControllerDelegate {
     func createHabitViewController(_ controller: CreateHabitViewController, didCreate tracker: Tracker) {

@@ -12,16 +12,30 @@ protocol CreateHabitViewControllerDelegate: AnyObject {
 }
 
 final class CreateHabitViewController: UIViewController {
+    // MARK: - Public Properties
+
     weak var delegate: CreateHabitViewControllerDelegate?
 
+    // MARK: - Private Properties
+
     private let options = ["Категория", "Расписание"]
-    private let optionCellIdentifier = "OptionCell"
+    private let nameLengthLimit = 38
     private var selectedSchedule: [Weekday] = []
 
     private let placeholderEmojis = ["❤️", "😻", "🌺", "😇", "😍", "🥶", "🤔", "🙂", "🐶"]
     private let placeholderColors: [UIColor] = [
         .systemRed, .systemOrange, .systemBlue, .systemGreen, .systemPurple, .systemPink
     ]
+
+    private var scheduleSummary: String? {
+        guard !selectedSchedule.isEmpty else { return nil }
+        if selectedSchedule.count == Weekday.allCases.count {
+            return "Каждый день"
+        }
+        return selectedSchedule.map { $0.shortTitle }.joined(separator: ", ")
+    }
+
+    // MARK: - UI Elements
 
     private lazy var nameTextField: UITextField = {
         let textField = UITextField()
@@ -38,14 +52,33 @@ final class CreateHabitViewController: UIViewController {
         return textField
     }()
 
+    private lazy var errorLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Ограничение 38 символов"
+        label.font = .systemFont(ofSize: 17)
+        label.textColor = UIColor(resource: .ypRed)
+        label.textAlignment = .center
+        label.isHidden = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    private lazy var fieldStackView: UIStackView = {
+        let stackView = UIStackView(arrangedSubviews: [nameTextField, errorLabel])
+        stackView.axis = .vertical
+        stackView.spacing = 8
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        return stackView
+    }()
+
     private lazy var optionsTableView: UITableView = {
         let tableView = UITableView()
         tableView.dataSource = self
         tableView.delegate = self
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: optionCellIdentifier)
+        tableView.register(OptionCell.self, forCellReuseIdentifier: OptionCell.reuseIdentifier)
         tableView.backgroundColor = .clear
         tableView.isScrollEnabled = false
-        tableView.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+        tableView.separatorStyle = .none
         tableView.layer.cornerRadius = 16
         tableView.clipsToBounds = true
         tableView.translatesAutoresizingMaskIntoConstraints = false
@@ -88,6 +121,8 @@ final class CreateHabitViewController: UIViewController {
         return stackView
     }()
 
+    // MARK: - Lifecycle
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
@@ -95,17 +130,19 @@ final class CreateHabitViewController: UIViewController {
         setupLayout()
     }
 
+    // MARK: - Setup
+
     private func setupLayout() {
-        view.addSubview(nameTextField)
+        view.addSubview(fieldStackView)
         view.addSubview(optionsTableView)
         view.addSubview(buttonsStackView)
         NSLayoutConstraint.activate([
-            nameTextField.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
-            nameTextField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            nameTextField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            fieldStackView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
+            fieldStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            fieldStackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             nameTextField.heightAnchor.constraint(equalToConstant: 75),
 
-            optionsTableView.topAnchor.constraint(equalTo: nameTextField.bottomAnchor, constant: 24),
+            optionsTableView.topAnchor.constraint(equalTo: fieldStackView.bottomAnchor, constant: 24),
             optionsTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             optionsTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             optionsTableView.heightAnchor.constraint(equalToConstant: 150),
@@ -117,14 +154,21 @@ final class CreateHabitViewController: UIViewController {
         ])
     }
 
+    // MARK: - Private Methods
+
     private func updateCreateButtonState() {
-        let hasName = !(nameTextField.text ?? "").trimmingCharacters(in: .whitespaces).isEmpty
-        let isEnabled = hasName && !selectedSchedule.isEmpty
+        let text = nameTextField.text ?? ""
+        let trimmedName = text.trimmingCharacters(in: .whitespaces)
+        let isValidName = !trimmedName.isEmpty && text.count <= nameLengthLimit
+        let isEnabled = isValidName && !selectedSchedule.isEmpty
         createButton.isEnabled = isEnabled
         createButton.backgroundColor = isEnabled ? UIColor(resource: .ypBlack) : UIColor(resource: .ypGray)
     }
 
+    // MARK: - Actions
+
     @objc private func nameChanged() {
+        errorLabel.isHidden = (nameTextField.text ?? "").count <= nameLengthLimit
         updateCreateButtonState()
     }
 
@@ -145,23 +189,16 @@ final class CreateHabitViewController: UIViewController {
     }
 }
 
-extension CreateHabitViewController: UITextFieldDelegate {
-    func textField(
-        _ textField: UITextField,
-        shouldChangeCharactersIn range: NSRange,
-        replacementString string: String
-    ) -> Bool {
-        let currentText = textField.text ?? ""
-        guard let stringRange = Range(range, in: currentText) else { return false }
-        let updatedText = currentText.replacingCharacters(in: stringRange, with: string)
-        return updatedText.count <= 38
-    }
+// MARK: - UITextFieldDelegate
 
+extension CreateHabitViewController: UITextFieldDelegate {
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         textField.resignFirstResponder()
         return true
     }
 }
+
+// MARK: - UITableViewDataSource
 
 extension CreateHabitViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -169,18 +206,24 @@ extension CreateHabitViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: optionCellIdentifier, for: indexPath)
-        var configuration = cell.defaultContentConfiguration()
-        configuration.text = options[indexPath.row]
-        configuration.textProperties.font = .systemFont(ofSize: 17)
-        configuration.textProperties.color = UIColor(resource: .ypBlack)
-        cell.contentConfiguration = configuration
-        cell.backgroundColor = UIColor(resource: .ypBackground)
-        cell.accessoryType = .disclosureIndicator
-        cell.selectionStyle = .none
+        guard let cell = tableView.dequeueReusableCell(
+            withIdentifier: OptionCell.reuseIdentifier,
+            for: indexPath
+        ) as? OptionCell else {
+            return UITableViewCell()
+        }
+        let isScheduleRow = indexPath.row == 1
+        let isLastRow = indexPath.row == options.count - 1
+        cell.configure(
+            title: options[indexPath.row],
+            subtitle: isScheduleRow ? scheduleSummary : nil,
+            showDivider: !isLastRow
+        )
         return cell
     }
 }
+
+// MARK: - UITableViewDelegate
 
 extension CreateHabitViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
@@ -196,9 +239,12 @@ extension CreateHabitViewController: UITableViewDelegate {
     }
 }
 
+// MARK: - ScheduleViewControllerDelegate
+
 extension CreateHabitViewController: ScheduleViewControllerDelegate {
     func scheduleViewController(_ controller: ScheduleViewController, didSelect schedule: [Weekday]) {
         selectedSchedule = schedule
+        optionsTableView.reloadData()
         updateCreateButtonState()
         navigationController?.popViewController(animated: true)
     }

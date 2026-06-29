@@ -12,7 +12,11 @@ protocol ScheduleViewControllerDelegate: AnyObject {
 }
 
 final class ScheduleViewController: UIViewController {
+    // MARK: - Public Properties
+
     weak var delegate: ScheduleViewControllerDelegate?
+
+    // MARK: - Private Properties
 
     private var selectedWeekdays: Set<Weekday>
 
@@ -23,7 +27,7 @@ final class ScheduleViewController: UIViewController {
         tableView.register(ScheduleCell.self, forCellReuseIdentifier: ScheduleCell.reuseIdentifier)
         tableView.backgroundColor = .clear
         tableView.isScrollEnabled = false
-        tableView.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+        tableView.separatorStyle = .none
         tableView.layer.cornerRadius = 16
         tableView.clipsToBounds = true
         tableView.translatesAutoresizingMaskIntoConstraints = false
@@ -42,6 +46,8 @@ final class ScheduleViewController: UIViewController {
         return button
     }()
 
+    // MARK: - Lifecycle
+
     init(selectedWeekdays: [Weekday]) {
         self.selectedWeekdays = Set(selectedWeekdays)
         super.init(nibName: nil, bundle: nil)
@@ -55,8 +61,11 @@ final class ScheduleViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
         title = "Расписание"
+        navigationItem.hidesBackButton = true
         setupLayout()
     }
+
+    // MARK: - Setup
 
     private func setupLayout() {
         view.addSubview(tableView)
@@ -74,11 +83,15 @@ final class ScheduleViewController: UIViewController {
         ])
     }
 
+    // MARK: - Actions
+
     @objc private func didTapDone() {
         let schedule = Weekday.allCases.filter { selectedWeekdays.contains($0) }
         delegate?.scheduleViewController(self, didSelect: schedule)
     }
 }
+
+// MARK: - UITableViewDataSource
 
 extension ScheduleViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -93,9 +106,14 @@ extension ScheduleViewController: UITableViewDataSource {
             return UITableViewCell()
         }
         let weekday = Weekday.allCases[indexPath.row]
-        cell.configure(title: weekday.title, isOn: selectedWeekdays.contains(weekday))
-        cell.onSwitchChanged = { [weak self] isOn in
-            if isOn {
+        let isLastRow = indexPath.row == Weekday.allCases.count - 1
+        cell.configure(
+            title: weekday.title,
+            isOn: selectedWeekdays.contains(weekday),
+            showDivider: !isLastRow
+        )
+        cell.onSwitchChanged = { [weak self] isSelected in
+            if isSelected {
                 self?.selectedWeekdays.insert(weekday)
             } else {
                 self?.selectedWeekdays.remove(weekday)
@@ -104,6 +122,8 @@ extension ScheduleViewController: UITableViewDataSource {
         return cell
     }
 }
+
+// MARK: - UITableViewDelegate
 
 extension ScheduleViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {

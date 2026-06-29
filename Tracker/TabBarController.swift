@@ -8,33 +8,50 @@
 import UIKit
 
 final class TabBarController: UITabBarController {
+    // MARK: - Lifecycle
+
     override func viewDidLoad() {
         super.viewDidLoad()
+        configureTabBar()
+        configureViewControllers()
+    }
 
-        let trackersViewController = TrackersViewController()
-        let trackersNavigationController = UINavigationController(
-            rootViewController: trackersViewController
-        )
-        trackersNavigationController.navigationBar.prefersLargeTitles = true
-        trackersNavigationController.tabBarItem = UITabBarItem(
-            title: "Трекеры",
-            image: UIImage(systemName: "record.circle.fill"),
-            selectedImage: nil
-        )
+    // MARK: - Setup
 
-        let statisticsViewController = StatisticsViewController()
-        let statisticsNavigationController = UINavigationController(
-            rootViewController: statisticsViewController
-        )
-        statisticsNavigationController.tabBarItem = UITabBarItem(
-            title: "Статистика",
-            image: UIImage(systemName: "hare.fill"),
-            selectedImage: nil
-        )
-
-        viewControllers = [trackersNavigationController, statisticsNavigationController]
-
+    private func configureTabBar() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = .systemBackground
+        appearance.shadowColor = .separator
+        tabBar.standardAppearance = appearance
+        tabBar.scrollEdgeAppearance = appearance
         tabBar.tintColor = UIColor(resource: .ypBlue)
         tabBar.unselectedItemTintColor = UIColor(resource: .ypGray)
+    }
+
+    private func configureViewControllers() {
+        viewControllers = [
+            makeNavigationController(
+                rootViewController: TrackersViewController(),
+                title: "Трекеры",
+                image: UIImage(systemName: "record.circle.fill")
+            ),
+            makeNavigationController(
+                rootViewController: StatisticsViewController(),
+                title: "Статистика",
+                image: UIImage(systemName: "hare.fill")
+            )
+        ]
+    }
+
+    private func makeNavigationController(
+        rootViewController: UIViewController,
+        title: String,
+        image: UIImage?
+    ) -> UINavigationController {
+        let navigationController = UINavigationController(rootViewController: rootViewController)
+        navigationController.navigationBar.prefersLargeTitles = true
+        navigationController.tabBarItem = UITabBarItem(title: title, image: image, selectedImage: nil)
+        return navigationController
     }
 }

@@ -12,9 +12,15 @@ protocol TrackerCellDelegate: AnyObject {
 }
 
 final class TrackerCell: UICollectionViewCell {
+    // MARK: - Static Properties
+
     static let reuseIdentifier = "TrackerCell"
 
+    // MARK: - Public Properties
+
     weak var delegate: TrackerCellDelegate?
+
+    // MARK: - Private Properties
 
     private lazy var cardView: UIView = {
         let view = UIView()
@@ -65,6 +71,8 @@ final class TrackerCell: UICollectionViewCell {
         return button
     }()
 
+    // MARK: - Lifecycle
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupViews()
@@ -73,6 +81,8 @@ final class TrackerCell: UICollectionViewCell {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+
+    // MARK: - Configuration
 
     func configure(
         name: String,
@@ -101,6 +111,16 @@ final class TrackerCell: UICollectionViewCell {
         counterLabel.text = nil
         completeButton.setImage(nil, for: .normal)
     }
+
+    func updateCompletionState(isCompleted: Bool, completedDays: Int, isEnabled: Bool) {
+        let imageName = isCompleted ? "checkmark" : "plus"
+        completeButton.setImage(UIImage(systemName: imageName), for: .normal)
+        completeButton.alpha = isCompleted ? 0.3 : 1
+        completeButton.isEnabled = isEnabled
+        counterLabel.text = dayString(for: completedDays)
+    }
+
+    // MARK: - Private Methods
 
     private func setupViews() {
         contentView.addSubview(cardView)
@@ -150,6 +170,8 @@ final class TrackerCell: UICollectionViewCell {
         }
         return "\(count) дней"
     }
+
+    // MARK: - Actions
 
     @objc private func didTapComplete() {
         delegate?.trackerCellDidToggleCompletion(self)

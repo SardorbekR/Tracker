@@ -8,7 +8,11 @@
 import UIKit
 
 final class TrackerSectionHeaderView: UICollectionReusableView {
+    // MARK: - Static Properties
+
     static let reuseIdentifier = "TrackerSectionHeaderView"
+
+    // MARK: - Private Properties
 
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
@@ -17,6 +21,8 @@ final class TrackerSectionHeaderView: UICollectionReusableView {
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
+
+    // MARK: - Lifecycle
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -32,6 +38,8 @@ final class TrackerSectionHeaderView: UICollectionReusableView {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+
+    // MARK: - Configuration
 
     func configure(title: String) {
         titleLabel.text = title
