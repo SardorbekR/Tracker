@@ -42,3 +42,17 @@ extension Weekday {
         }
     }
 }
+
+extension Weekday {
+    static func encode(_ schedule: [Weekday]) -> String {
+        schedule.map { String($0.rawValue) }.joined(separator: ",")
+    }
+
+    static func decode(_ schedule: String?) -> [Weekday] {
+        guard let schedule, !schedule.isEmpty else { return [] }
+        return schedule
+            .split(separator: ",")
+            .compactMap { Int($0) }
+            .compactMap { Weekday(rawValue: $0) }
+    }
+}
