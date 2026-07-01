@@ -52,6 +52,23 @@ final class TrackerCategoryStore: NSObject {
         self.init(context: coreDataStack.context)
     }
 
+    // MARK: - Public Methods
+
+    func addCategory(_ title: String) throws {
+        let request = TrackerCategoryCoreData.fetchRequest()
+        request.predicate = NSPredicate(
+            format: "%K == %@",
+            #keyPath(TrackerCategoryCoreData.title),
+            title
+        )
+        if try context.fetch(request).first != nil {
+            return
+        }
+        let categoryCoreData = TrackerCategoryCoreData(context: context)
+        categoryCoreData.title = title
+        try context.save()
+    }
+
     // MARK: - Private Methods
 
     private func category(from categoryCoreData: TrackerCategoryCoreData) -> TrackerCategory? {

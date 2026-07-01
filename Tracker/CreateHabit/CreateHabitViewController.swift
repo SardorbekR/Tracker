@@ -8,7 +8,11 @@
 import UIKit
 
 protocol CreateHabitViewControllerDelegate: AnyObject {
-    func createHabitViewController(_ controller: CreateHabitViewController, didCreate tracker: Tracker)
+    func createHabitViewController(
+        _ controller: CreateHabitViewController,
+        didCreate tracker: Tracker,
+        categoryTitle: String
+    )
 }
 
 final class CreateHabitViewController: UIViewController {
@@ -18,10 +22,12 @@ final class CreateHabitViewController: UIViewController {
 
     // MARK: - Private Properties
 
+    private let coreDataStack: CoreDataStack
     private let options = ["Категория", "Расписание"]
     private let nameLengthLimit = 38
     private var selectedSchedule: [Weekday] = []
 
+    private var selectedCategory: String?
     private var selectedEmoji: String?
     private var selectedColor: UIColor?
 
@@ -150,10 +156,21 @@ final class CreateHabitViewController: UIViewController {
 
     // MARK: - Lifecycle
 
+    init(coreDataStack: CoreDataStack) {
+        self.coreDataStack = coreDataStack
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        nil
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
         title = "Новая привычка"
+        navigationItem.backButtonDisplayMode = .minimal
         setupLayout()
         setupKeyboardDismiss()
     }
@@ -263,11 +280,31 @@ final class CreateHabitViewController: UIViewController {
         let trimmedName = text.trimmingCharacters(in: .whitespaces)
         let isValidName = !trimmedName.isEmpty && text.count <= nameLengthLimit
         let isEnabled = isValidName
+            && selectedCategory != nil
             && !selectedSchedule.isEmpty
             && selectedEmoji != nil
             && selectedColor != nil
         createButton.isEnabled = isEnabled
         createButton.backgroundColor = isEnabled ? UIColor(resource: .ypBlack) : UIColor(resource: .ypGray)
+    }
+
+    private func openCategories() {
+        let store = TrackerCategoryStore(coreDataStack: coreDataStack)
+        let viewModel = CategoriesViewModel(store: store, selectedCategoryTitle: selectedCategory)
+        viewModel.onCategorySelected = { [weak self] title in
+            self?.selectedCategory = title
+            self?.optionsTableView.reloadData()
+            self?.updateCreateButtonState()
+            self?.navigationController?.popViewController(animated: true)
+        }
+        let categoriesViewController = CategoriesViewController(viewModel: viewModel)
+        navigationController?.pushViewController(categoriesViewController, animated: true)
+    }
+
+    private func openSchedule() {
+        let scheduleViewController = ScheduleViewController(selectedWeekdays: selectedSchedule)
+        scheduleViewController.delegate = self
+        navigationController?.pushViewController(scheduleViewController, animated: true)
     }
 
     // MARK: - Actions
@@ -287,7 +324,13 @@ final class CreateHabitViewController: UIViewController {
 
     @objc private func didTapCreate() {
         let name = (nameTextField.text ?? "").trimmingCharacters(in: .whitespaces)
-        guard let emoji = selectedEmoji, let color = selectedColor else { return }
+        guard
+            let categoryTitle = selectedCategory,
+            let emoji = selectedEmoji,
+            let color = selectedColor
+        else {
+            return
+        }
         let tracker = Tracker(
             id: UUID(),
             name: name,
@@ -295,7 +338,7 @@ final class CreateHabitViewController: UIViewController {
             emoji: emoji,
             schedule: selectedSchedule
         )
-        delegate?.createHabitViewController(self, didCreate: tracker)
+        delegate?.createHabitViewController(self, didCreate: tracker, categoryTitle: categoryTitle)
     }
 }
 
@@ -326,7 +369,7 @@ extension CreateHabitViewController: UITableViewDataSource {
         let isLastRow = indexPath.row == options.count - 1
         cell.configure(
             title: options[indexPath.row],
-            subtitle: isScheduleRow ? scheduleSummary : nil,
+            subtitle: isScheduleRow ? scheduleSummary : selectedCategory,
             showDivider: !isLastRow
         )
         return cell
@@ -342,10 +385,11 @@ extension CreateHabitViewController: UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        guard indexPath.row == 1 else { return }
-        let scheduleViewController = ScheduleViewController(selectedWeekdays: selectedSchedule)
-        scheduleViewController.delegate = self
-        navigationController?.pushViewController(scheduleViewController, animated: true)
+        if indexPath.row == 0 {
+            openCategories()
+        } else {
+            openSchedule()
+        }
     }
 }
 

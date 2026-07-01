@@ -44,11 +44,7 @@ final class TabBarController: UITabBarController {
     }
 
     private func configureViewControllers() {
-        let trackersViewController = TrackersViewController(
-            trackerStore: TrackerStore(coreDataStack: coreDataStack),
-            trackerCategoryStore: TrackerCategoryStore(coreDataStack: coreDataStack),
-            trackerRecordStore: TrackerRecordStore(coreDataStack: coreDataStack)
-        )
+        let trackersViewController = TrackersViewController(coreDataStack: coreDataStack)
         viewControllers = [
             makeNavigationController(
                 rootViewController: trackersViewController,

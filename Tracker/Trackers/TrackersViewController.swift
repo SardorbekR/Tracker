@@ -10,8 +10,7 @@ import UIKit
 final class TrackersViewController: UIViewController {
     // MARK: - Private Properties
 
-    private let defaultCategoryTitle = "Важное"
-
+    private let coreDataStack: CoreDataStack
     private let trackerStore: TrackerStore
     private let trackerCategoryStore: TrackerCategoryStore
     private let trackerRecordStore: TrackerRecordStore
@@ -84,14 +83,11 @@ final class TrackersViewController: UIViewController {
 
     // MARK: - Lifecycle
 
-    init(
-        trackerStore: TrackerStore,
-        trackerCategoryStore: TrackerCategoryStore,
-        trackerRecordStore: TrackerRecordStore
-    ) {
-        self.trackerStore = trackerStore
-        self.trackerCategoryStore = trackerCategoryStore
-        self.trackerRecordStore = trackerRecordStore
+    init(coreDataStack: CoreDataStack) {
+        self.coreDataStack = coreDataStack
+        self.trackerStore = TrackerStore(coreDataStack: coreDataStack)
+        self.trackerCategoryStore = TrackerCategoryStore(coreDataStack: coreDataStack)
+        self.trackerRecordStore = TrackerRecordStore(coreDataStack: coreDataStack)
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -184,7 +180,7 @@ final class TrackersViewController: UIViewController {
     // MARK: - Actions
 
     @objc private func didTapAddButton() {
-        let createHabitViewController = CreateHabitViewController()
+        let createHabitViewController = CreateHabitViewController(coreDataStack: coreDataStack)
         createHabitViewController.delegate = self
         let navigationController = UINavigationController(rootViewController: createHabitViewController)
         present(navigationController, animated: true)
@@ -329,8 +325,12 @@ extension TrackersViewController: TrackerCellDelegate {
 // MARK: - CreateHabitViewControllerDelegate
 
 extension TrackersViewController: CreateHabitViewControllerDelegate {
-    func createHabitViewController(_ controller: CreateHabitViewController, didCreate tracker: Tracker) {
-        try? trackerStore.addTracker(tracker, categoryTitle: defaultCategoryTitle)
+    func createHabitViewController(
+        _ controller: CreateHabitViewController,
+        didCreate tracker: Tracker,
+        categoryTitle: String
+    ) {
+        try? trackerStore.addTracker(tracker, categoryTitle: categoryTitle)
         dismiss(animated: true)
     }
 }
