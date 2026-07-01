@@ -8,7 +8,21 @@
 import UIKit
 
 final class TabBarController: UITabBarController {
+    // MARK: - Private Properties
+
+    private let coreDataStack: CoreDataStack
+
     // MARK: - Lifecycle
+
+    init(coreDataStack: CoreDataStack) {
+        self.coreDataStack = coreDataStack
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        nil
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -22,7 +36,7 @@ final class TabBarController: UITabBarController {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = .systemBackground
-        appearance.shadowColor = .separator
+        appearance.shadowColor = UIColor(resource: .ypGray)
         tabBar.standardAppearance = appearance
         tabBar.scrollEdgeAppearance = appearance
         tabBar.tintColor = UIColor(resource: .ypBlue)
@@ -30,9 +44,14 @@ final class TabBarController: UITabBarController {
     }
 
     private func configureViewControllers() {
+        let trackersViewController = TrackersViewController(
+            trackerStore: TrackerStore(coreDataStack: coreDataStack),
+            trackerCategoryStore: TrackerCategoryStore(coreDataStack: coreDataStack),
+            trackerRecordStore: TrackerRecordStore(coreDataStack: coreDataStack)
+        )
         viewControllers = [
             makeNavigationController(
-                rootViewController: TrackersViewController(),
+                rootViewController: trackersViewController,
                 title: "Трекеры",
                 image: UIImage(systemName: "record.circle.fill")
             ),

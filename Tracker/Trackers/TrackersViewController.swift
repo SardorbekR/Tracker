@@ -12,18 +12,13 @@ final class TrackersViewController: UIViewController {
 
     private let defaultCategoryTitle = "Важное"
 
-    private var categories: [TrackerCategory] = []
-    private var completedTrackers: [TrackerRecord] = []
+    private let trackerStore: TrackerStore
+    private let trackerCategoryStore: TrackerCategoryStore
+    private let trackerRecordStore: TrackerRecordStore
+
+    private var visibleCategories: [TrackerCategory] = []
     private var currentDate = Calendar.current.startOfDay(for: Date())
     private var isSelectedDateInFuture = false
-
-    private var visibleCategories: [TrackerCategory] {
-        let selectedWeekday = weekday(from: currentDate)
-        return categories.compactMap { category in
-            let trackers = category.trackers.filter { $0.schedule.contains(selectedWeekday) }
-            return trackers.isEmpty ? nil : TrackerCategory(title: category.title, trackers: trackers)
-        }
-    }
 
     private lazy var addButton: UIBarButtonItem = {
         let button = UIBarButtonItem(
@@ -89,13 +84,31 @@ final class TrackersViewController: UIViewController {
 
     // MARK: - Lifecycle
 
+    init(
+        trackerStore: TrackerStore,
+        trackerCategoryStore: TrackerCategoryStore,
+        trackerRecordStore: TrackerRecordStore
+    ) {
+        self.trackerStore = trackerStore
+        self.trackerCategoryStore = trackerCategoryStore
+        self.trackerRecordStore = trackerRecordStore
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        nil
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
+        trackerStore.delegate = self
+        trackerCategoryStore.delegate = self
         setupNavigationBar()
         setupCollectionView()
         setupPlaceholder()
-        updatePlaceholderVisibility()
+        reload()
     }
 
     // MARK: - Setup
@@ -133,30 +146,24 @@ final class TrackersViewController: UIViewController {
 
     // MARK: - Private Methods
 
-    private func updatePlaceholderVisibility() {
-        let isEmpty = visibleCategories.isEmpty
-        placeholderStackView.isHidden = !isEmpty
-        collectionView.isHidden = isEmpty
-    }
-
     private func reload() {
+        visibleCategories = makeVisibleCategories()
         collectionView.reloadData()
         updatePlaceholderVisibility()
     }
 
-    private func addTracker(_ tracker: Tracker, toCategoryTitled title: String) {
-        if let index = categories.firstIndex(where: { $0.title == title }) {
-            let category = categories[index]
-            let updatedCategory = TrackerCategory(
-                title: category.title,
-                trackers: category.trackers + [tracker]
-            )
-            var updatedCategories = categories
-            updatedCategories[index] = updatedCategory
-            categories = updatedCategories
-        } else {
-            categories = categories + [TrackerCategory(title: title, trackers: [tracker])]
+    private func makeVisibleCategories() -> [TrackerCategory] {
+        let selectedWeekday = weekday(from: currentDate)
+        return trackerCategoryStore.categories.compactMap { category in
+            let trackers = category.trackers.filter { $0.schedule.contains(selectedWeekday) }
+            return trackers.isEmpty ? nil : TrackerCategory(title: category.title, trackers: trackers)
         }
+    }
+
+    private func updatePlaceholderVisibility() {
+        let isEmpty = visibleCategories.isEmpty
+        placeholderStackView.isHidden = !isEmpty
+        collectionView.isHidden = isEmpty
     }
 
     private func weekday(from date: Date) -> Weekday {
@@ -165,13 +172,13 @@ final class TrackersViewController: UIViewController {
     }
 
     private func isTrackerCompleted(_ tracker: Tracker, on date: Date) -> Bool {
-        completedTrackers.contains {
+        trackerRecordStore.records.contains {
             $0.trackerId == tracker.id && Calendar.current.isDate($0.date, inSameDayAs: date)
         }
     }
 
     private func completedDaysCount(_ tracker: Tracker) -> Int {
-        completedTrackers.filter { $0.trackerId == tracker.id }.count
+        trackerRecordStore.records.filter { $0.trackerId == tracker.id }.count
     }
 
     // MARK: - Actions
@@ -302,12 +309,14 @@ extension TrackersViewController: TrackerCellDelegate {
             return
         }
         let tracker = visibleCategories[indexPath.section].trackers[indexPath.item]
-        if isTrackerCompleted(tracker, on: currentDate) {
-            completedTrackers.removeAll {
-                $0.trackerId == tracker.id && Calendar.current.isDate($0.date, inSameDayAs: currentDate)
+        do {
+            if isTrackerCompleted(tracker, on: currentDate) {
+                try trackerRecordStore.removeRecord(trackerId: tracker.id, date: currentDate)
+            } else {
+                try trackerRecordStore.addRecord(trackerId: tracker.id, date: currentDate)
             }
-        } else {
-            completedTrackers.append(TrackerRecord(trackerId: tracker.id, date: currentDate))
+        } catch {
+            return
         }
         cell.updateCompletionState(
             isCompleted: isTrackerCompleted(tracker, on: currentDate),
@@ -321,8 +330,23 @@ extension TrackersViewController: TrackerCellDelegate {
 
 extension TrackersViewController: CreateHabitViewControllerDelegate {
     func createHabitViewController(_ controller: CreateHabitViewController, didCreate tracker: Tracker) {
-        addTracker(tracker, toCategoryTitled: defaultCategoryTitle)
+        try? trackerStore.addTracker(tracker, categoryTitle: defaultCategoryTitle)
         dismiss(animated: true)
+    }
+}
+
+// MARK: - TrackerStoreDelegate
+
+extension TrackersViewController: TrackerStoreDelegate {
+    func trackerStoreDidChange() {
+        reload()
+    }
+}
+
+// MARK: - TrackerCategoryStoreDelegate
+
+extension TrackersViewController: TrackerCategoryStoreDelegate {
+    func trackerCategoryStoreDidChange() {
         reload()
     }
 }

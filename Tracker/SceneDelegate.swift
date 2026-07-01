@@ -15,9 +15,14 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         willConnectTo session: UISceneSession,
         options connectionOptions: UIScene.ConnectionOptions
     ) {
-        guard let scene = scene as? UIWindowScene else { return }
+        guard
+            let scene = scene as? UIWindowScene,
+            let coreDataStack = (UIApplication.shared.delegate as? AppDelegate)?.coreDataStack
+        else {
+            return
+        }
         window = UIWindow(windowScene: scene)
-        window?.rootViewController = TabBarController()
+        window?.rootViewController = TabBarController(coreDataStack: coreDataStack)
         window?.overrideUserInterfaceStyle = .light
         window?.makeKeyAndVisible()
     }
