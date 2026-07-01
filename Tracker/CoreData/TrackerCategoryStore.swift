@@ -57,7 +57,9 @@ final class TrackerCategoryStore: NSObject {
     private func category(from categoryCoreData: TrackerCategoryCoreData) -> TrackerCategory? {
         guard let title = categoryCoreData.title else { return nil }
         let trackersCoreData = (categoryCoreData.trackers as? Set<TrackerCoreData>) ?? []
-        let trackers = trackersCoreData.compactMap { $0.toTracker() }
+        let trackers = trackersCoreData
+            .sorted { ($0.name ?? "") < ($1.name ?? "") }
+            .compactMap { $0.toTracker() }
         return TrackerCategory(title: title, trackers: trackers)
     }
 }

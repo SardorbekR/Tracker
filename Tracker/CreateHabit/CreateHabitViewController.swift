@@ -22,24 +22,6 @@ final class CreateHabitViewController: UIViewController {
     private let nameLengthLimit = 38
     private var selectedSchedule: [Weekday] = []
 
-    private let emojis = [
-        "🙂", "😻", "🌺", "🐶", "❤️", "😱",
-        "😇", "😡", "🥶", "🤔", "🙌", "🍔",
-        "🥦", "🏓", "🥇", "🎸", "🏝", "😪"
-    ]
-
-    private let colors: [UIColor] = [
-        UIColor(resource: .colorSelection1), UIColor(resource: .colorSelection2),
-        UIColor(resource: .colorSelection3), UIColor(resource: .colorSelection4),
-        UIColor(resource: .colorSelection5), UIColor(resource: .colorSelection6),
-        UIColor(resource: .colorSelection7), UIColor(resource: .colorSelection8),
-        UIColor(resource: .colorSelection9), UIColor(resource: .colorSelection10),
-        UIColor(resource: .colorSelection11), UIColor(resource: .colorSelection12),
-        UIColor(resource: .colorSelection13), UIColor(resource: .colorSelection14),
-        UIColor(resource: .colorSelection15), UIColor(resource: .colorSelection16),
-        UIColor(resource: .colorSelection17), UIColor(resource: .colorSelection18)
-    ]
-
     private var selectedEmoji: String?
     private var selectedColor: UIColor?
 
@@ -371,7 +353,7 @@ extension CreateHabitViewController: UITableViewDelegate {
 
 extension CreateHabitViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        collectionView === emojiCollectionView ? emojis.count : colors.count
+        collectionView === emojiCollectionView ? TrackerOptions.emojis.count : TrackerOptions.colors.count
     }
 
     func collectionView(
@@ -385,7 +367,7 @@ extension CreateHabitViewController: UICollectionViewDataSource {
             ) as? EmojiCell else {
                 return UICollectionViewCell()
             }
-            cell.configure(emoji: emojis[indexPath.item])
+            cell.configure(emoji: TrackerOptions.emojis[indexPath.item])
             return cell
         } else {
             guard let cell = collectionView.dequeueReusableCell(
@@ -394,7 +376,7 @@ extension CreateHabitViewController: UICollectionViewDataSource {
             ) as? ColorCell else {
                 return UICollectionViewCell()
             }
-            cell.configure(color: colors[indexPath.item])
+            cell.configure(color: TrackerOptions.colors[indexPath.item])
             return cell
         }
     }
@@ -424,9 +406,9 @@ extension CreateHabitViewController: UICollectionViewDelegateFlowLayout {
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         if collectionView === emojiCollectionView {
-            selectedEmoji = emojis[indexPath.item]
+            selectedEmoji = TrackerOptions.emojis[indexPath.item]
         } else {
-            selectedColor = colors[indexPath.item]
+            selectedColor = TrackerOptions.colors[indexPath.item]
         }
         updateCreateButtonState()
     }
